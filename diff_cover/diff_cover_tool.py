@@ -6,6 +6,7 @@ import os
 import sys
 import argparse
 import six
+import difile
 
 try:
     # Needed for Python < 3.3, works up to 3.8
@@ -149,6 +150,13 @@ def parse_coverage_args(argv):
         version='diff-cover {}'.format(VERSION)
     )
 
+    parser.add_argument(
+        '--target_dir',
+        metavar='target_dir',
+        type=str,
+        default="",
+    )
+
     return vars(parser.parse_args(argv))
 
 
@@ -156,14 +164,40 @@ def generate_coverage_report(coverage_xml, compare_branch,
                              html_report=None, css_file=None,
                              json_report=None,
                              ignore_staged=False, ignore_unstaged=False,
-                             exclude=None, src_roots=None, diff_range_notation=None):
+                             exclude=None, src_roots=None, diff_range_notation=None,
+                             target_dir=None):
     """
     Generate the diff coverage report, using kwargs from `parse_args()`.
     """
-    diff = GitDiffReporter(
-        compare_branch, git_diff=GitDiffTool(diff_range_notation),
-        ignore_staged=ignore_staged, ignore_unstaged=ignore_unstaged,
-        exclude=exclude)
+    if target_dir:
+        class FileDiffReporter(GitDiffReporter):
+            def __init__(self, *args, **kwargs):
+                self.target_dir = kwargs.pop("td")
+                super(FileDiffReporter, self).__init__(*args, **kwargs)
+
+            def _git_diff(self):
+                def compare(left, right):
+                    d = difile.Difile()
+                    result = d.compare_dir(left, right)
+                    diff_result = dict()
+
+                    for each_file in result:
+                        key = each_file[0].file_path.as_posix()
+                        diff_result[key] = []
+                        for each_line in each_file:
+                            diff_result[key].append(each_line.line_no)
+                    return diff_result
+                return compare(src_roots[0], self.target_dir)
+
+        diff = FileDiffReporter(
+            compare_branch, git_diff=GitDiffTool(diff_range_notation),
+            ignore_staged=ignore_staged, ignore_unstaged=ignore_unstaged,
+            exclude=exclude, td=target_dir)
+    else:
+        diff = GitDiffReporter(
+            compare_branch, git_diff=GitDiffTool(diff_range_notation),
+            ignore_staged=ignore_staged, ignore_unstaged=ignore_unstaged,
+            exclude=exclude)
 
     xml_roots = [etree.parse(xml_root) for xml_root in coverage_xml]
     coverage = XmlCoverageReporter(xml_roots, src_roots)
@@ -217,7 +251,8 @@ def main(argv=None, directory=None):
         ignore_unstaged=arg_dict['ignore_unstaged'],
         exclude=arg_dict['exclude'],
         src_roots=arg_dict['src_roots'],
-        diff_range_notation=arg_dict['diff_range_notation']
+        diff_range_notation=arg_dict['diff_range_notation'],
+        target_dir=arg_dict['target_dir'],
     )
 
     if percent_covered >= fail_under:

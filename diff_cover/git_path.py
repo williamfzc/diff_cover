@@ -6,8 +6,9 @@ import os
 import subprocess
 import six
 import sys
+import warnings
 
-from diff_cover.command_runner import execute
+from diff_cover.command_runner import execute, CommandError
 
 
 class GitPathTool(object):
@@ -66,5 +67,9 @@ class GitPathTool(object):
         is the absolute path for the git project root.
         """
         command = ['git', 'rev-parse', '--show-toplevel', '--encoding=utf-8']
-        git_root = execute(command)[0]
+        try:
+            git_root = execute(command)[0]
+        except CommandError as e:
+            warnings.warn(e)
+            return ''
         return git_root.split('\n')[0] if git_root else ''
