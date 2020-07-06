@@ -183,7 +183,10 @@ def generate_coverage_report(coverage_xml, compare_branch,
 
                     for each_file in result:
                         key = each_file[0].file_path.as_posix()
-                        diff_result[key] = []
+                        if key.startswith(str(self.target_dir)):
+                            key = key.replace(str(self.target_dir) + "/", "")
+                        if key not in diff_result:
+                            diff_result[key] = []
                         for each_line in each_file:
                             diff_result[key].append(each_line.line_no)
                     return diff_result
