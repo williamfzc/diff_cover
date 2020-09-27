@@ -70,6 +70,6 @@ class GitPathTool(object):
         try:
             git_root = execute(command)[0]
         except CommandError as e:
-            warnings.warn(e)
+            warnings.warn(str(e))
             return ''
         return git_root.split('\n')[0] if git_root else ''
