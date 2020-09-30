@@ -7,6 +7,7 @@ import sys
 import argparse
 import six
 import difile
+import json
 
 try:
     # Needed for Python < 3.3, works up to 3.8
@@ -157,6 +158,13 @@ def parse_coverage_args(argv):
         default="",
     )
 
+    parser.add_argument(
+        '--diff_json',
+        metavar='diff_json',
+        type=str,
+        default="",
+    )
+
     return vars(parser.parse_args(argv))
 
 
@@ -165,7 +173,7 @@ def generate_coverage_report(coverage_xml, compare_branch,
                              json_report=None,
                              ignore_staged=False, ignore_unstaged=False,
                              exclude=None, src_roots=None, diff_range_notation=None,
-                             target_dir=None):
+                             target_dir=None, diff_json=None):
     """
     Generate the diff coverage report, using kwargs from `parse_args()`.
     """
@@ -204,6 +212,11 @@ def generate_coverage_report(coverage_xml, compare_branch,
 
     xml_roots = [etree.parse(xml_root) for xml_root in coverage_xml]
     coverage = XmlCoverageReporter(xml_roots, src_roots)
+
+    if diff_json:
+        diff_dict = diff._git_diff()
+        with open(diff_json, "w") as f:
+            json.dump(diff_dict, f)
 
     # Build a report generator
     if html_report is not None:
@@ -256,6 +269,7 @@ def main(argv=None, directory=None):
         src_roots=arg_dict['src_roots'],
         diff_range_notation=arg_dict['diff_range_notation'],
         target_dir=arg_dict['target_dir'],
+        diff_json=arg_dict['diff_json'],
     )
 
     if percent_covered >= fail_under:
