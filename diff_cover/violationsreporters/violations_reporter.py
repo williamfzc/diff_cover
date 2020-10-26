@@ -96,6 +96,10 @@ class XmlCoverageReporter(BaseViolationReporter):
             or
             [clazz for clazz in classes if
              self._to_unix_path(clazz.get('filename')) == src_rel_path]
+            or
+            # reportgenerator may cause some errors
+            [clazz for clazz in classes if
+             src_rel_path in self._to_unix_path(clazz.get('filename'))]
         )
         return classes
 
