@@ -190,6 +190,8 @@ def generate_coverage_report(coverage_xml, compare_branch,
                     diff_result = dict()
 
                     for each_file in result:
+                        if not each_file:
+                            continue
                         key = each_file[0].file_path.as_posix()
                         if key.startswith(str(self.target_dir)):
                             key = key.replace(str(self.target_dir) + "/", "")
